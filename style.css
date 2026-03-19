@@ -1,0 +1,487 @@
+/* ===== CSS Custom Properties ===== */
+:root {
+  --world-color: #ff4500;
+  --world-color-dim: rgba(255, 69, 0, 0.15);
+  --bg: #0d0d14;
+  --surface: #161622;
+  --surface2: #1e1e2e;
+  --border: #2e2e4e;
+  --text: #e0e0f0;
+  --text-dim: #888;
+  --gold: #f5c542;
+  --shard: #a78bfa;
+  --gem: #34d399;
+  --hp-hero: #22c55e;
+  --hp-enemy: #ef4444;
+  --xp-bar: #60a5fa;
+  --radius: 8px;
+  --radius-sm: 4px;
+}
+
+/* ===== Reset ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== Top Bar ===== */
+#top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: var(--surface);
+  border-bottom: 2px solid var(--world-color);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  transition: border-color 0.4s;
+}
+
+#game-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--world-color);
+  letter-spacing: 1px;
+  transition: color 0.4s;
+}
+
+#currencies {
+  display: flex;
+  gap: 20px;
+}
+
+.currency {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+#currencies #gold-display { color: var(--gold); }
+#currencies #shards-display { color: var(--shard); }
+.gems-dim { color: var(--text-dim); }
+
+#active-world-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.world-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--world-color);
+  transition: background 0.4s;
+}
+
+/* ===== Main Layout ===== */
+#game-container {
+  display: grid;
+  grid-template-columns: 240px 1fr 280px;
+  grid-template-rows: 1fr;
+  gap: 12px;
+  padding: 12px;
+  flex: 1;
+  min-height: 0;
+}
+
+/* ===== Shared Panel Styles ===== */
+aside, section, #right-column > section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  overflow-y: auto;
+}
+
+h2 {
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--world-color);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  transition: color 0.4s;
+}
+
+/* ===== World Panel ===== */
+#world-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.world-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.world-card.active {
+  border-color: var(--world-color);
+  background: var(--world-color-dim);
+}
+
+.world-card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.world-icon { font-size: 1.2rem; }
+
+.world-rules {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.world-rules span { display: block; }
+.rule-positive { color: #86efac; }
+.rule-negative { color: #fca5a5; }
+.rule-neutral { color: var(--text-dim); }
+
+.set-active-btn {
+  width: 100%;
+  padding: 5px 8px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--world-color);
+  background: transparent;
+  color: var(--world-color);
+  transition: background 0.2s;
+}
+
+.set-active-btn:hover:not(:disabled) { background: var(--world-color-dim); }
+.set-active-btn:disabled { opacity: 0.4; cursor: default; border-color: var(--border); color: var(--text-dim); }
+
+/* ===== Combat Panel ===== */
+#combat-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+#hero-zone, #enemy-zone {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+}
+
+.zone-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+#wave-badge {
+  font-size: 0.75rem;
+  background: var(--world-color);
+  color: #000;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 700;
+  transition: background 0.4s;
+}
+
+.bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 0.8rem;
+}
+
+.bar-row label { width: 24px; color: var(--text-dim); }
+
+.bar-track {
+  flex: 1;
+  height: 10px;
+  background: var(--border);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 0.3s ease;
+}
+
+.hp-fill { background: var(--hp-hero); }
+.xp-fill { background: var(--xp-bar); }
+.enemy-hp-fill { background: var(--hp-enemy); }
+
+.bar-label { font-size: 0.75rem; color: var(--text-dim); min-width: 80px; text-align: right; }
+
+#hero-stats {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+
+#hero-level-badge {
+  font-size: 0.75rem;
+  background: var(--xp-bar);
+  color: #000;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+/* ===== Combat Controls ===== */
+#combat-controls {
+  display: flex;
+  gap: 8px;
+}
+
+#combat-controls button {
+  flex: 1;
+  padding: 8px 4px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+#combat-controls button:hover:not(:disabled) { background: var(--border); }
+#combat-controls button:disabled { opacity: 0.4; cursor: default; }
+
+#start-battle-btn { border-color: var(--world-color); color: var(--world-color); }
+#auto-battle-btn.active { border-color: #22c55e; color: #22c55e; }
+#next-wave-btn:not(:disabled) { border-color: #60a5fa; color: #60a5fa; }
+
+/* ===== Battle Log ===== */
+#battle-log-container {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  min-height: 160px;
+  max-height: 300px;
+  overflow: hidden;
+}
+
+.log-header {
+  padding: 6px 10px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border);
+}
+
+#battle-log {
+  list-style: none;
+  overflow-y: auto;
+  flex: 1;
+  padding: 6px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+#battle-log li {
+  font-size: 0.78rem;
+  padding: 1px 0;
+}
+
+.log-hero { color: #86efac; }
+.log-crit { color: #fde047; font-weight: 700; }
+.log-enemy { color: #fca5a5; }
+.log-system { color: var(--text-dim); font-style: italic; }
+
+/* ===== Right Column ===== */
+#right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ===== Fusion Panel ===== */
+#fusion-panel {}
+
+.fusion-desc {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+}
+
+#fusion-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+#fusion-selector select {
+  flex: 1;
+  padding: 6px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+}
+
+#fusion-selector span { color: var(--text-dim); font-weight: 700; }
+
+#fusion-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: var(--surface2);
+  border: 1px solid #8b00ff;
+  border-radius: var(--radius-sm);
+  margin-bottom: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #c084fc;
+}
+
+#fusion-panel button, #prestige-panel button {
+  width: 100%;
+  padding: 8px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  transition: background 0.2s;
+}
+
+#fuse-btn {
+  border: 1px solid #8b00ff;
+  background: transparent;
+  color: #c084fc;
+}
+
+#fuse-btn:hover:not(:disabled) { background: rgba(139,0,255,0.15); }
+#fuse-btn:disabled { opacity: 0.4; cursor: default; }
+
+.fusion-unlocked-msg {
+  text-align: center;
+  font-size: 0.85rem;
+  color: #c084fc;
+  padding: 8px;
+  background: rgba(139,0,255,0.1);
+  border-radius: var(--radius-sm);
+  border: 1px solid #8b00ff;
+}
+
+/* ===== Prestige Panel ===== */
+.prestige-row {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.prestige-row strong { color: var(--text); }
+.current-bonus strong { color: var(--shard); }
+.earn-row strong { color: var(--gold); }
+
+.gate-msg {
+  font-size: 0.78rem;
+  color: #fbbf24;
+  margin-bottom: 8px;
+  padding: 6px 8px;
+  background: rgba(251,191,36,0.08);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(251,191,36,0.2);
+}
+
+#prestige-btn {
+  border: 1px solid #ef4444;
+  background: transparent;
+  color: #f87171;
+  margin-top: 4px;
+}
+
+#prestige-btn:hover:not(:disabled) { background: rgba(239,68,68,0.15); }
+#prestige-btn:disabled { opacity: 0.4; cursor: default; }
+
+/* ===== Offline Modal ===== */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.modal.hidden { display: none; }
+
+.modal-box {
+  background: var(--surface);
+  border: 1px solid var(--world-color);
+  border-radius: var(--radius);
+  padding: 30px;
+  text-align: center;
+  max-width: 380px;
+  width: 90%;
+}
+
+.modal-box h2 {
+  font-size: 1.1rem;
+  margin-bottom: 12px;
+  border: none;
+  padding: 0;
+  letter-spacing: 1px;
+}
+
+#offline-time-msg { font-size: 0.85rem; color: var(--text-dim); margin-bottom: 16px; }
+
+.big-reward {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--gold);
+  margin-bottom: 10px;
+}
+
+.cap-msg { font-size: 0.78rem; color: var(--text-dim); margin-bottom: 12px; }
+
+#offline-continue-btn {
+  margin-top: 8px;
+  padding: 10px 30px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--world-color);
+  background: var(--world-color-dim);
+  color: var(--world-color);
+  font-size: 0.9rem;
+  transition: background 0.2s;
+}
+
+#offline-continue-btn:hover { background: var(--world-color); color: #000; }
+
+/* ===== Utility ===== */
+.hidden { display: none !important; }
