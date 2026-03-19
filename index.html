@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chrono Dominion</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Top Bar -->
+  <header id="top-bar">
+    <div id="game-title">⏳ Chrono Dominion</div>
+    <div id="currencies">
+      <span class="currency" id="gold-display">🪙 0</span>
+      <span class="currency" id="shards-display">💎 0</span>
+      <span class="currency gems-dim" id="gems-display">✨ 0</span>
+    </div>
+    <div id="active-world-badge">
+      <span class="world-dot"></span>
+      <span id="active-world-name">Fire World</span>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <main id="game-container">
+
+    <!-- Left: World Selector -->
+    <aside id="world-panel">
+      <h2>Your Universes</h2>
+      <div id="world-cards-container"></div>
+    </aside>
+
+    <!-- Center: Combat -->
+    <section id="combat-panel">
+      <h2>Battle Arena</h2>
+
+      <!-- Hero Zone -->
+      <div id="hero-zone">
+        <div class="zone-header">
+          <span id="hero-name">Hero</span>
+          <span id="hero-level-badge">Lv.1</span>
+        </div>
+        <div class="bar-row">
+          <label>HP</label>
+          <div class="bar-track">
+            <div class="bar-fill hp-fill" id="hero-hp-bar"></div>
+          </div>
+          <span class="bar-label" id="hero-hp-label">100 / 100</span>
+        </div>
+        <div class="bar-row">
+          <label>XP</label>
+          <div class="bar-track">
+            <div class="bar-fill xp-fill" id="hero-xp-bar"></div>
+          </div>
+          <span class="bar-label" id="hero-xp-label">0 / 100</span>
+        </div>
+        <div id="hero-stats">ATK: <span id="hero-atk">10</span> | DEF: <span id="hero-def">5</span> | CRIT: <span id="hero-crit">15%</span></div>
+      </div>
+
+      <!-- Enemy Zone -->
+      <div id="enemy-zone">
+        <div class="zone-header">
+          <span id="enemy-name">— No Enemy —</span>
+          <span id="wave-badge">Wave 1</span>
+        </div>
+        <div class="bar-row">
+          <label>HP</label>
+          <div class="bar-track">
+            <div class="bar-fill enemy-hp-fill" id="enemy-hp-bar" style="width:0%"></div>
+          </div>
+          <span class="bar-label" id="enemy-hp-label">— / —</span>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div id="combat-controls">
+        <button id="start-battle-btn">⚔️ Start Battle</button>
+        <button id="auto-battle-btn" class="active">🔄 Auto: ON</button>
+        <button id="next-wave-btn" disabled>➡️ Next Wave</button>
+      </div>
+
+      <!-- Battle Log -->
+      <div id="battle-log-container">
+        <div class="log-header">Battle Log</div>
+        <ul id="battle-log"></ul>
+      </div>
+    </section>
+
+    <!-- Right Column -->
+    <div id="right-column">
+
+      <!-- Fusion Panel -->
+      <section id="fusion-panel">
+        <h2>🔬 World Fusion Lab</h2>
+        <div id="fusion-content">
+          <p class="fusion-desc">Combine two worlds to create something greater.</p>
+          <div id="fusion-selector">
+            <select id="fuse-world-a">
+              <option value="">— Select World A —</option>
+            </select>
+            <span>+</span>
+            <select id="fuse-world-b">
+              <option value="">— Select World B —</option>
+            </select>
+          </div>
+          <div id="fusion-preview" class="hidden">
+            <span id="fusion-result-icon">☠️</span>
+            <span id="fusion-result-name">Toxic Inferno</span>
+          </div>
+          <button id="fuse-btn" disabled>Fuse Worlds</button>
+        </div>
+      </section>
+
+      <!-- Prestige Panel -->
+      <section id="prestige-panel">
+        <h2>🔁 Reality Reset</h2>
+        <div id="prestige-content">
+          <div class="prestige-row">Max Wave Reached: <strong id="prestige-max-wave">1</strong></div>
+          <div class="prestige-row">Prestige Count: <strong id="prestige-count">0</strong></div>
+          <div class="prestige-row current-bonus">Shard Bonus: <strong id="shard-bonus-display">+0%</strong> to all gold</div>
+          <div class="prestige-row earn-row">Prestige now → earn <strong id="shards-preview">0</strong> Reality Shards</div>
+          <div id="prestige-gate-msg" class="gate-msg">Reach Wave 10 to unlock Prestige</div>
+          <button id="prestige-btn" disabled>💥 Prestige Now</button>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Offline Progress Modal -->
+  <div id="offline-modal" class="modal hidden">
+    <div class="modal-box">
+      <h2>Welcome back, Reality Architect!</h2>
+      <p id="offline-time-msg">You were away for a while.</p>
+      <div id="offline-gold-earned" class="big-reward">+0 Gold</div>
+      <p id="offline-cap-msg" class="hidden cap-msg">(Capped at 8 hours max)</p>
+      <button id="offline-continue-btn">Continue</button>
+    </div>
+  </div>
+
+  <!-- Scripts (order matters: dependencies first) -->
+  <script src="src/worlds.js"></script>
+  <script src="src/save.js"></script>
+  <script src="src/idle.js"></script>
+  <script src="src/combat.js"></script>
+  <script src="src/fusion.js"></script>
+  <script src="src/prestige.js"></script>
+  <script src="src/ui.js"></script>
+  <script src="src/main.js"></script>
+
+</body>
+</html>
