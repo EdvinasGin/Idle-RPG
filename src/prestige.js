@@ -39,7 +39,6 @@ const PrestigeSystem = (() => {
     Player.hero = HeroDefaults();
     Player.combat = CombatDefaults();
     Player.activeWorldId = 'fire';
-    Player.goldPerTick = 1;
 
     // Re-apply world rules for fire world (default after prestige)
     WorldSystem.applyActiveWorldRules();

@@ -1,12 +1,52 @@
 /**
  * ui.js — All DOM manipulation and panel rendering
- * Uses event delegation on panel containers to avoid listener leaks on innerHTML re-renders.
- * CSS custom property --world-color drives theming; set in WorldSystem.applyActiveWorldRules().
+ *
+ * DOM elements are cached once in _cacheElements() (called from bindEvents).
+ * Shared sub-renderers (_renderHeroBars, _renderEnemyZone, _renderPrestigeState)
+ * are called by both the full renderCombatPanel/renderPrestigePanel and the
+ * lightweight per-tick renderTick, keeping the two paths in sync automatically.
  */
 
 const UI = (() => {
 
-  // ===== Helpers =====
+  // ===== Cached DOM references (populated in _cacheElements) =====
+  const _el = {};
+
+  function _cacheElements() {
+    _el.goldDisplay      = document.getElementById('gold-display');
+    _el.shardsDisplay    = document.getElementById('shards-display');
+    _el.gemsDisplay      = document.getElementById('gems-display');
+    _el.activeWorldName  = document.getElementById('active-world-name');
+    _el.heroName         = document.getElementById('hero-name');
+    _el.heroLevelBadge   = document.getElementById('hero-level-badge');
+    _el.heroHpBar        = document.getElementById('hero-hp-bar');
+    _el.heroHpLabel      = document.getElementById('hero-hp-label');
+    _el.heroXpBar        = document.getElementById('hero-xp-bar');
+    _el.heroXpLabel      = document.getElementById('hero-xp-label');
+    _el.heroAtk          = document.getElementById('hero-atk');
+    _el.heroDef          = document.getElementById('hero-def');
+    _el.heroCrit         = document.getElementById('hero-crit');
+    _el.enemyName        = document.getElementById('enemy-name');
+    _el.enemyHpBar       = document.getElementById('enemy-hp-bar');
+    _el.enemyHpLabel     = document.getElementById('enemy-hp-label');
+    _el.waveBadge        = document.getElementById('wave-badge');
+    _el.startBattleBtn   = document.getElementById('start-battle-btn');
+    _el.autoBattleBtn    = document.getElementById('auto-battle-btn');
+    _el.nextWaveBtn      = document.getElementById('next-wave-btn');
+    _el.battleLog        = document.getElementById('battle-log');
+    _el.prestigeMaxWave  = document.getElementById('prestige-max-wave');
+    _el.shardsPreview    = document.getElementById('shards-preview');
+    _el.prestigeBtn      = document.getElementById('prestige-btn');
+    _el.prestigeGateMsg  = document.getElementById('prestige-gate-msg');
+    _el.prestigeCount    = document.getElementById('prestige-count');
+    _el.shardBonusDisplay = document.getElementById('shard-bonus-display');
+    _el.offlineModal     = document.getElementById('offline-modal');
+    _el.offlineTimeMsg   = document.getElementById('offline-time-msg');
+    _el.offlineGoldEarned = document.getElementById('offline-gold-earned');
+    _el.offlineCapMsg    = document.getElementById('offline-cap-msg');
+  }
+
+  // ===== Pure Helpers =====
 
   function fmt(n) {
     return Math.floor(n).toLocaleString('en-US');
@@ -27,6 +67,43 @@ const UI = (() => {
     return `${s}s`;
   }
 
+  // ===== Shared Sub-renderers =====
+
+  // Updates the hero HP and XP bars + level badge. Called by both renderCombatPanel and renderTick.
+  function _renderHeroBars(h) {
+    _el.heroLevelBadge.textContent = `Lv.${h.level}`;
+    _el.heroHpBar.style.width      = `${pct(h.hp, h.maxHp)}%`;
+    _el.heroHpLabel.textContent    = `${Math.floor(h.hp)} / ${h.maxHp}`;
+    _el.heroXpBar.style.width      = `${pct(h.xp, h.xpToNextLevel)}%`;
+    _el.heroXpLabel.textContent    = `${Math.floor(h.xp)} / ${h.xpToNextLevel}`;
+  }
+
+  // Updates enemy name, HP bar, and HP label. Called by both renderCombatPanel and renderTick.
+  function _renderEnemyZone(c) {
+    if (c.currentEnemy) {
+      _el.enemyName.textContent     = c.currentEnemy.name;
+      _el.enemyHpBar.style.width    = `${pct(c.currentEnemy.hp, c.currentEnemy.maxHp)}%`;
+      _el.enemyHpLabel.textContent  = `${Math.floor(c.currentEnemy.hp)} / ${c.currentEnemy.maxHp}`;
+    } else {
+      _el.enemyName.textContent     = '— No Enemy —';
+      _el.enemyHpBar.style.width    = '0%';
+      _el.enemyHpLabel.textContent  = '— / —';
+    }
+  }
+
+  // Updates prestige gate message, button state, and shard preview. Single owner for this logic.
+  function _renderPrestigeState(c) {
+    _el.prestigeMaxWave.textContent = c.maxWave;
+    if (PrestigeSystem.canPrestige()) {
+      _el.shardsPreview.textContent = PrestigeSystem.calcShardsEarned();
+      _el.prestigeBtn.disabled = false;
+      _el.prestigeGateMsg.classList.add('hidden');
+    } else {
+      _el.prestigeBtn.disabled = true;
+      _el.prestigeGateMsg.classList.remove('hidden');
+    }
+  }
+
   // ===== Full Re-render =====
 
   function renderAll() {
@@ -40,14 +117,12 @@ const UI = (() => {
   // ===== Top Bar =====
 
   function renderTopBar() {
-    document.getElementById('gold-display').textContent   = `🪙 ${fmt(Player.gold)}`;
-    document.getElementById('shards-display').textContent = `💎 ${Player.realityShards}`;
-    document.getElementById('gems-display').textContent   = `✨ ${Player.gems}`;
+    _el.goldDisplay.textContent   = `🪙 ${fmt(Player.gold)}`;
+    _el.shardsDisplay.textContent = `💎 ${Player.realityShards}`;
+    _el.gemsDisplay.textContent   = `✨ ${Player.gems}`;
 
     const world = WORLDS[Player.activeWorldId];
-    if (world) {
-      document.getElementById('active-world-name').textContent = world.name;
-    }
+    if (world) _el.activeWorldName.textContent = world.name;
   }
 
   // ===== World Panel =====
@@ -69,9 +144,10 @@ const UI = (() => {
       const spdLine  = rules.speedMultiplier < 1
         ? `<span class="rule-positive">x${(1 / rules.speedMultiplier).toFixed(0)} Attack Speed</span>`
         : '';
+      // Use actual hero crit chance instead of a hardcoded constant
       const critLine = !rules.critAllowed
         ? `<span class="rule-negative">No Critical Hits</span>`
-        : `<span class="rule-positive">Crits: ${Math.round(15)}% chance</span>`;
+        : `<span class="rule-positive">Crits: ${Math.round(Player.hero.critChance * 100)}% chance</span>`;
       const idleLine = `<span class="rule-neutral">Idle Gold: x${rules.idleGoldMultiplier.toFixed(1)}</span>`;
 
       const isActive = world.id === Player.activeWorldId;
@@ -99,104 +175,63 @@ const UI = (() => {
     const h = Player.hero;
     const c = Player.combat;
 
-    // Hero zone
-    document.getElementById('hero-name').textContent      = 'Reality Warrior';
-    document.getElementById('hero-level-badge').textContent = `Lv.${h.level}`;
-    document.getElementById('hero-hp-bar').style.width    = `${pct(h.hp, h.maxHp)}%`;
-    document.getElementById('hero-hp-label').textContent  = `${Math.floor(h.hp)} / ${h.maxHp}`;
-    document.getElementById('hero-xp-bar').style.width    = `${pct(h.xp, h.xpToNextLevel)}%`;
-    document.getElementById('hero-xp-label').textContent  = `${Math.floor(h.xp)} / ${h.xpToNextLevel}`;
-
+    // Hero zone — static fields + dynamic bars
+    _el.heroName.textContent = h.name;
     const world = WORLDS[Player.activeWorldId];
     const critDisplay = world && world.rules.critAllowed ? `${Math.round(h.critChance * 100)}%` : 'N/A';
-    document.getElementById('hero-atk').textContent  = h.attackBase;
-    document.getElementById('hero-def').textContent  = h.defense;
-    document.getElementById('hero-crit').textContent = critDisplay;
+    _el.heroAtk.textContent  = h.attackBase;
+    _el.heroDef.textContent  = h.defense;
+    _el.heroCrit.textContent = critDisplay;
+    _renderHeroBars(h);
 
     // Enemy zone
-    const waveBadge = document.getElementById('wave-badge');
-    waveBadge.textContent = `Wave ${c.waveNumber}`;
-
-    if (c.currentEnemy) {
-      document.getElementById('enemy-name').textContent     = c.currentEnemy.name;
-      document.getElementById('enemy-hp-bar').style.width  = `${pct(c.currentEnemy.hp, c.currentEnemy.maxHp)}%`;
-      document.getElementById('enemy-hp-label').textContent = `${Math.floor(c.currentEnemy.hp)} / ${c.currentEnemy.maxHp}`;
-    } else {
-      document.getElementById('enemy-name').textContent     = '— No Enemy —';
-      document.getElementById('enemy-hp-bar').style.width  = '0%';
-      document.getElementById('enemy-hp-label').textContent = '— / —';
-    }
+    _el.waveBadge.textContent = `Wave ${c.waveNumber}`;
+    _renderEnemyZone(c);
 
     // Controls
-    const startBtn    = document.getElementById('start-battle-btn');
-    const autoBtn     = document.getElementById('auto-battle-btn');
-    const nextWaveBtn = document.getElementById('next-wave-btn');
+    _el.startBattleBtn.disabled = c.active;
+    _el.nextWaveBtn.disabled    = !!c.currentEnemy || c.active;
+    _el.autoBattleBtn.textContent = c.autoBattleEnabled ? '🔄 Auto: ON' : '⏸ Auto: OFF';
+    _el.autoBattleBtn.className   = c.autoBattleEnabled ? 'active' : '';
 
-    startBtn.disabled    = c.active;
-    nextWaveBtn.disabled = !!c.currentEnemy || c.active;
-
-    autoBtn.textContent = c.autoBattleEnabled ? '🔄 Auto: ON' : '⏸ Auto: OFF';
-    autoBtn.className   = c.autoBattleEnabled ? 'active' : '';
-
-    // Scroll battle log to bottom
-    const logEl = document.getElementById('battle-log');
-    logEl.scrollTop = logEl.scrollHeight;
+    _el.battleLog.scrollTop = _el.battleLog.scrollHeight;
   }
 
   // ===== Tick Update (lightweight, called every tick) =====
 
   function renderTick() {
-    // Currencies
-    document.getElementById('gold-display').textContent = `🪙 ${fmt(Player.gold)}`;
+    _el.goldDisplay.textContent = `🪙 ${fmt(Player.gold)}`;
 
     const h = Player.hero;
     const c = Player.combat;
 
-    // HP bars
-    document.getElementById('hero-hp-bar').style.width    = `${pct(h.hp, h.maxHp)}%`;
-    document.getElementById('hero-hp-label').textContent  = `${Math.floor(h.hp)} / ${h.maxHp}`;
+    _renderHeroBars(h);
+    _renderEnemyZone(c);
 
-    if (c.currentEnemy) {
-      document.getElementById('enemy-hp-bar').style.width  = `${pct(c.currentEnemy.hp, c.currentEnemy.maxHp)}%`;
-      document.getElementById('enemy-hp-label').textContent = `${Math.floor(c.currentEnemy.hp)} / ${c.currentEnemy.maxHp}`;
-      document.getElementById('enemy-name').textContent     = c.currentEnemy.name;
-    } else {
-      document.getElementById('enemy-hp-bar').style.width  = '0%';
-      document.getElementById('enemy-hp-label').textContent = '— / —';
-      document.getElementById('enemy-name').textContent     = '— No Enemy —';
-    }
+    _el.waveBadge.textContent = `Wave ${c.waveNumber}`;
+    _el.startBattleBtn.disabled = c.active;
+    _el.nextWaveBtn.disabled    = !!c.currentEnemy || c.active;
 
-    document.getElementById('wave-badge').textContent = `Wave ${c.waveNumber}`;
-    document.getElementById('hero-level-badge').textContent = `Lv.${h.level}`;
-    document.getElementById('hero-xp-bar').style.width    = `${pct(h.xp, h.xpToNextLevel)}%`;
-    document.getElementById('hero-xp-label').textContent  = `${Math.floor(h.xp)} / ${h.xpToNextLevel}`;
-
-    // Control states
-    document.getElementById('start-battle-btn').disabled    = c.active;
-    document.getElementById('next-wave-btn').disabled       = !!c.currentEnemy || c.active;
-
-    // Prestige preview update
-    document.getElementById('prestige-max-wave').textContent = c.maxWave;
-    if (PrestigeSystem.canPrestige()) {
-      document.getElementById('shards-preview').textContent = PrestigeSystem.calcShardsEarned();
-      document.getElementById('prestige-btn').disabled = false;
-      document.getElementById('prestige-gate-msg').classList.add('hidden');
-    } else {
-      document.getElementById('prestige-btn').disabled = true;
-      document.getElementById('prestige-gate-msg').classList.remove('hidden');
-    }
-
-    // Append new battle log lines
+    _renderPrestigeState(c);
     _renderBattleLogTail();
   }
+
+  // ===== Battle Log =====
 
   let _lastLogLength = 0;
 
   function _renderBattleLogTail() {
-    const logEl   = document.getElementById('battle-log');
     const entries = Player.combat.battleLog;
 
+    // Guard before any DOM access: early-return if nothing changed
     if (entries.length === _lastLogLength) return;
+
+    // Self-heal: if the log was cleared (e.g. prestige resets battleLog to []),
+    // wipe stale DOM entries and reset the tracker.
+    if (entries.length < _lastLogLength) {
+      _el.battleLog.innerHTML = '';
+      _lastLogLength = 0;
+    }
 
     // Append only new entries
     for (let i = _lastLogLength; i < entries.length; i++) {
@@ -204,16 +239,20 @@ const UI = (() => {
       const li = document.createElement('li');
       li.textContent = msg;
       li.className = `log-${type}`;
-      logEl.appendChild(li);
+      _el.battleLog.appendChild(li);
     }
 
-    // Trim excess DOM nodes if log overflows (keep in sync with cap)
-    while (logEl.children.length > 50) {
-      logEl.removeChild(logEl.firstChild);
+    // Trim DOM to match the data-layer cap (only runs when over cap)
+    const cap = CombatSystem.BATTLE_LOG_CAP;
+    if (_el.battleLog.children.length > cap) {
+      const toRemove = _el.battleLog.children.length - cap;
+      for (let i = 0; i < toRemove; i++) {
+        _el.battleLog.removeChild(_el.battleLog.firstChild);
+      }
     }
 
     _lastLogLength = entries.length;
-    logEl.scrollTop = logEl.scrollHeight;
+    _el.battleLog.scrollTop = _el.battleLog.scrollHeight;
   }
 
   // ===== Fusion Panel =====
@@ -232,7 +271,7 @@ const UI = (() => {
       return;
     }
 
-    // Reset to selector UI
+    // Rebuild selector UI
     content.innerHTML = `
       <p class="fusion-desc">Combine two worlds to create something greater.</p>
       <div id="fusion-selector">
@@ -250,34 +289,26 @@ const UI = (() => {
     const selA = document.getElementById('fuse-world-a');
     const selB = document.getElementById('fuse-world-b');
 
-    const worlds = WorldSystem.getUnlockedWorlds();
-    worlds.forEach(w => {
-      selA.innerHTML += `<option value="${w.id}">${w.icon} ${w.name}</option>`;
-      selB.innerHTML += `<option value="${w.id}">${w.icon} ${w.name}</option>`;
-    });
+    // Build options once and assign to both selects
+    const optionsHtml = WorldSystem.getUnlockedWorlds()
+      .map(w => `<option value="${w.id}">${w.icon} ${w.name}</option>`)
+      .join('');
+    selA.innerHTML += optionsHtml;
+    selB.innerHTML += optionsHtml;
 
     function onSelectionChange() {
-      const idA = selA.value;
-      const idB = selB.value;
-      const check = FusionSystem.canFuse(idA, idB);
+      const check   = FusionSystem.canFuse(selA.value, selB.value);
       const fuseBtn = document.getElementById('fuse-btn');
       const preview = document.getElementById('fusion-preview');
-
       fuseBtn.disabled = !check.canFuse;
-      if (check.canFuse) {
-        preview.classList.remove('hidden');
-      } else {
-        preview.classList.add('hidden');
-      }
+      preview.classList.toggle('hidden', !check.canFuse);
     }
 
     selA.addEventListener('change', onSelectionChange);
     selB.addEventListener('change', onSelectionChange);
 
     document.getElementById('fuse-btn').addEventListener('click', () => {
-      const idA = document.getElementById('fuse-world-a').value;
-      const idB = document.getElementById('fuse-world-b').value;
-      if (FusionSystem.fuseWorlds(idA, idB)) {
+      if (FusionSystem.fuseWorlds(selA.value, selB.value)) {
         renderWorldPanel();
         renderFusionPanel();
       }
@@ -288,52 +319,31 @@ const UI = (() => {
 
   function renderPrestigePanel() {
     const bonus = ((Player.shardBonusMultiplier - 1) * 100).toFixed(1);
-    document.getElementById('prestige-count').textContent        = Player.totalPrestiges;
-    document.getElementById('shard-bonus-display').textContent  = `+${bonus}%`;
-    document.getElementById('shards-display').textContent       = `💎 ${Player.realityShards}`;
-    document.getElementById('prestige-max-wave').textContent    = Player.combat.maxWave;
-
-    const canP    = PrestigeSystem.canPrestige();
-    const gateMsg = document.getElementById('prestige-gate-msg');
-    const btn     = document.getElementById('prestige-btn');
-
-    if (canP) {
-      document.getElementById('shards-preview').textContent = PrestigeSystem.calcShardsEarned();
-      btn.disabled = false;
-      gateMsg.classList.add('hidden');
-    } else {
-      btn.disabled = true;
-      gateMsg.classList.remove('hidden');
-    }
+    _el.prestigeCount.textContent      = Player.totalPrestiges;
+    _el.shardBonusDisplay.textContent  = `+${bonus}%`;
+    // #shards-display is owned by renderTopBar — do not write it here
+    _renderPrestigeState(Player.combat);
   }
 
   // ===== Offline Modal =====
 
   function showOfflineModal(result) {
-    const modal = document.getElementById('offline-modal');
-    document.getElementById('offline-time-msg').textContent =
-      `You were away for ${fmtTime(result.elapsedMs)}.`;
-    document.getElementById('offline-gold-earned').textContent =
-      `+${fmt(result.goldEarned)} Gold`;
-
-    const capMsg = document.getElementById('offline-cap-msg');
-    if (result.wasCapped) {
-      capMsg.classList.remove('hidden');
-    } else {
-      capMsg.classList.add('hidden');
-    }
-
-    modal.classList.remove('hidden');
+    _el.offlineTimeMsg.textContent    = `You were away for ${fmtTime(result.elapsedMs)}.`;
+    _el.offlineGoldEarned.textContent = `+${fmt(result.goldEarned)} Gold`;
+    _el.offlineCapMsg.classList.toggle('hidden', !result.wasCapped);
+    _el.offlineModal.classList.remove('hidden');
   }
 
   function hideOfflineModal() {
-    document.getElementById('offline-modal').classList.add('hidden');
+    _el.offlineModal.classList.add('hidden');
   }
 
   // ===== Event Binding =====
 
   function bindEvents() {
-    // World panel — event delegation
+    _cacheElements();
+
+    // World panel — event delegation on the container
     document.getElementById('world-cards-container').addEventListener('click', e => {
       const btn = e.target.closest('.set-active-btn');
       if (btn && !btn.disabled) {
@@ -348,23 +358,21 @@ const UI = (() => {
     });
 
     // Combat controls
-    document.getElementById('start-battle-btn').addEventListener('click', () => {
+    _el.startBattleBtn.addEventListener('click', () => {
       CombatSystem.startBattle();
-      renderCombatPanel();
     });
 
-    document.getElementById('auto-battle-btn').addEventListener('click', () => {
+    _el.autoBattleBtn.addEventListener('click', () => {
       CombatSystem.setAutoBattle(!Player.combat.autoBattleEnabled);
     });
 
-    document.getElementById('next-wave-btn').addEventListener('click', () => {
+    _el.nextWaveBtn.addEventListener('click', () => {
       if (!Player.combat.currentEnemy) {
         CombatSystem.advanceWaveManual();
-        renderCombatPanel();
       }
     });
 
-    // Prestige button
+    // Prestige button — event delegation on the panel
     document.getElementById('prestige-panel').addEventListener('click', e => {
       if (e.target.id === 'prestige-btn' && !e.target.disabled) {
         if (Player.combat.active && Player.combat.currentEnemy) {
@@ -373,7 +381,7 @@ const UI = (() => {
         }
         if (confirm(`Prestige now? You will earn ${PrestigeSystem.calcShardsEarned()} Reality Shards. All progress will reset.`)) {
           PrestigeSystem.doPrestige();
-          _lastLogLength = 0;
+          // _renderBattleLogTail self-heals on the next tick when it detects battleLog.length < _lastLogLength
         }
       }
     });

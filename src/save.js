@@ -11,10 +11,9 @@ const SaveSystem = (() => {
 
   function save() {
     try {
-      // battleLog is ephemeral — strip it before saving
-      const saveData = JSON.parse(JSON.stringify(Player));
-      saveData.combat.battleLog = [];
-      saveData.lastSaveTime = Date.now();
+      // Shallow spread avoids deep-cloning the full Player just to strip battleLog
+      const combatData = { ...Player.combat, battleLog: [] };
+      const saveData   = { ...Player, combat: combatData, lastSaveTime: Date.now() };
       localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
     } catch (e) {
       console.error('Save failed:', e);
@@ -41,9 +40,8 @@ const SaveSystem = (() => {
         // battleLog is never saved, always starts empty
         const { battleLog: _bl, ...restCombat } = saved.combat;
         Object.assign(Player.combat, restCombat);
+        // Always start with a clean combat state — safer than resuming mid-fight
         Player.combat.battleLog = [];
-        // currentEnemy can be null on reload — combat resumes but no active fight
-        // (safer to require player to restart battle than resume mid-fight)
         Player.combat.active = false;
         Player.combat.currentEnemy = null;
         Player.combat.ticksSinceLastAttack = 0;
@@ -72,10 +70,13 @@ const SaveSystem = (() => {
     localStorage.removeItem(SAVE_KEY);
   }
 
+  // TextEncoder/TextDecoder: correct UTF-8 base64 without deprecated escape/unescape
   function exportSave() {
     try {
-      const raw = localStorage.getItem(SAVE_KEY) || JSON.stringify(Player);
-      return btoa(unescape(encodeURIComponent(raw)));
+      const raw    = localStorage.getItem(SAVE_KEY) || JSON.stringify(Player);
+      const bytes  = new TextEncoder().encode(raw);
+      const binary = Array.from(bytes, b => String.fromCharCode(b)).join('');
+      return btoa(binary);
     } catch (e) {
       console.error('Export failed:', e);
       return '';
@@ -84,7 +85,9 @@ const SaveSystem = (() => {
 
   function importSave(encoded) {
     try {
-      const raw = decodeURIComponent(escape(atob(encoded)));
+      const binary = atob(encoded);
+      const bytes  = Uint8Array.from(binary, c => c.charCodeAt(0));
+      const raw    = new TextDecoder().decode(bytes);
       localStorage.setItem(SAVE_KEY, raw);
       return load();
     } catch (e) {

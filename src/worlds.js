@@ -6,6 +6,7 @@
 
 // ===== Player defaults (defined here so worlds.js is loaded first) =====
 const HeroDefaults = () => ({
+  name: 'Reality Warrior',
   hp: 100,
   maxHp: 100,
   attackBase: 10,

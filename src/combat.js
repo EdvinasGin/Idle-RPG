@@ -3,6 +3,12 @@
  * Hero attacks every attackIntervalTicks ticks. Attacker advantage: hero resolves first.
  */
 
+// Module-scope constant: avoids reallocating the array on every wave spawn
+const _ENEMY_NAMES = [
+  'Ember Wraith','Void Shade','Chrono Stalker','Rift Beast','Infernal Drake',
+  'Null Specter','Chaos Golem','Temporal Fiend','Astral Horror','Reality Eater',
+];
+
 const CombatSystem = (() => {
 
   const BASE_HP      = 50;
@@ -15,25 +21,24 @@ const CombatSystem = (() => {
   // ===== Enemy Generation =====
 
   function generateEnemy(waveNumber) {
-    const w = waveNumber;
+    // Cache shared pow values to avoid redundant computation
+    const hpScale  = Math.pow(1.15, waveNumber);
+    const atkScale = Math.pow(1.10, waveNumber);
+    const hp       = Math.floor(BASE_HP * hpScale);
     return {
-      name: _enemyName(waveNumber),
-      hp: Math.floor(BASE_HP * Math.pow(1.15, w)),
-      maxHp: Math.floor(BASE_HP * Math.pow(1.15, w)),
-      attackBase: Math.floor(BASE_ATTACK * Math.pow(1.10, w)),
-      defense: Math.floor(BASE_DEFENSE * Math.pow(1.05, w)),
-      goldReward: Math.floor(BASE_GOLD * Math.pow(1.12, w)),
-      xpReward: Math.floor(BASE_XP * Math.pow(1.10, w)),
-      waveNumber: w,
+      name:       _enemyName(waveNumber),
+      hp,
+      maxHp:      hp,
+      attackBase: Math.floor(BASE_ATTACK  * atkScale),
+      defense:    Math.floor(BASE_DEFENSE * Math.pow(1.05, waveNumber)),
+      goldReward: Math.floor(BASE_GOLD    * Math.pow(1.12, waveNumber)),
+      xpReward:   Math.floor(BASE_XP      * atkScale),
+      waveNumber,
     };
   }
 
   function _enemyName(wave) {
-    const names = [
-      'Ember Wraith','Void Shade','Chrono Stalker','Rift Beast','Infernal Drake',
-      'Null Specter','Chaos Golem','Temporal Fiend','Astral Horror','Reality Eater',
-    ];
-    return names[(wave - 1) % names.length] + ` #${Math.ceil(wave / names.length)}`;
+    return _ENEMY_NAMES[(wave - 1) % _ENEMY_NAMES.length] + ` #${Math.ceil(wave / _ENEMY_NAMES.length)}`;
   }
 
   // ===== Damage Calculation =====
@@ -128,15 +133,15 @@ const CombatSystem = (() => {
     _log(`${enemy.name} defeated! +${enemy.goldReward} gold, +${enemy.xpReward} XP.`, 'system');
 
     Player.combat.currentEnemy = null;
-    Player.combat.active = false;
 
-    // Auto-advance: spawn next wave automatically (after a brief pause next tick will trigger it)
-    // We just stop combat; the "Next Wave" button or auto-advance handles next spawn.
-    // For good UX: auto-advance immediately if autoBattle is on
     if (Player.combat.autoBattleEnabled) {
       spawnWave(Player.combat.waveNumber + 1);
-      Player.combat.active = true;
+      // combat.active stays true — battle continues without toggling
+    } else {
+      Player.combat.active = false;
     }
+
+    UI.renderCombatPanel();
   }
 
   function onHeroDefeated() {
@@ -147,12 +152,14 @@ const CombatSystem = (() => {
     Player.combat.waveNumber = 1;
     Player.combat.ticksSinceLastAttack = 0;
     // maxWave is NOT decreased
+    UI.renderCombatPanel();
   }
 
   function advanceWaveManual() {
     if (Player.combat.currentEnemy) return; // enemy still alive
     spawnWave(Player.combat.waveNumber + 1);
     Player.combat.active = true;
+    UI.renderCombatPanel();
   }
 
   // ===== XP / Leveling =====
@@ -176,8 +183,9 @@ const CombatSystem = (() => {
   function _log(msg, type) {
     const c = Player.combat;
     c.battleLog.push({ msg, type });
+    // shift() is idiomatic for capped queues; splice(0,n) is O(n) for the same result
     if (c.battleLog.length > BATTLE_LOG_CAP) {
-      c.battleLog.splice(0, c.battleLog.length - BATTLE_LOG_CAP);
+      c.battleLog.shift();
     }
   }
 
@@ -188,5 +196,6 @@ const CombatSystem = (() => {
     spawnWave,
     advanceWaveManual,
     generateEnemy,
+    BATTLE_LOG_CAP,
   };
 })();

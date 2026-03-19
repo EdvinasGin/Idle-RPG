@@ -28,11 +28,7 @@ const IdleEngine = (() => {
     const wasCapped = deltaMs > MAX_OFFLINE_MS;
     const ticks = Math.floor(effectiveDelta / 1000);
 
-    const world = WORLDS[Player.activeWorldId];
-    const idleMult = world ? world.rules.idleGoldMultiplier : 1;
-    const effectiveRate = Player.goldPerTick * idleMult * Player.shardBonusMultiplier * OFFLINE_EFFICIENCY;
-
-    const goldEarned = Math.floor(ticks * effectiveRate);
+    const goldEarned = Math.floor(ticks * _effectiveGoldPerTick() * OFFLINE_EFFICIENCY);
     Player.gold += goldEarned;
 
     return {
